@@ -1,0 +1,86 @@
+###############################################################################
+# Script Name: ConfigureLaunchAuthPage.ps1
+# Version: 7
+# Description: Configures the Windows registry to set the Cato Agent
+#              LaunchAuthPageOnStartup registry key for a seamless user 
+#              authentication experience and attempts to start the Cato Agent.
+#              Logs the output of the Start-Process command for troubleshooting.
+# Created On: 2024-11-22
+# Author: Bryan Hull
+# Logs: 
+#   - General execution logs: C:\Logs\RegistryScriptLog.txt
+#   - Cato Client debug log: C:\Logs\CatoClientDebugLog.txt
+# Notes: Ensure the script is run with administrative privileges.
+###############################################################################
+
+# Define log file locations
+$GeneralLogFile = "C:\Logs\RegistryScriptLog.txt"
+$CatoClientDebugLog = "C:\Logs\CatoClientDebugLog.txt"
+
+# Create the Logs folder if it doesn't exist
+if (-not (Test-Path -Path "C:\Logs")) {
+    New-Item -ItemType Directory -Path "C:\Logs" | Out-Null
+}
+
+# Function to write general log messages
+function Write-Log {
+    param (
+        [string]$Message
+    )
+    $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$Timestamp - $Message" | Out-File -FilePath $GeneralLogFile -Append
+}
+
+# Start logging
+Write-Log "Script started."
+
+# Path to the registry key
+$RegistryPath = "HKLM:\SOFTWARE\CatoNetworksVPN"
+
+try {
+    # Check if the registry key exists, if not, create it
+    if (-not (Test-Path $RegistryPath)) {
+        try {
+            New-Item -Path $RegistryPath -Force | Out-Null
+            Write-Log "Created registry key: $RegistryPath"
+        } catch {
+            Write-Log "Error creating registry key: $($_.Exception.Message)"
+            throw
+        }
+    } else {
+        Write-Log "Registry key already exists: $RegistryPath"
+    }
+
+    # Attempt to set the registry value
+    try {
+        Set-ItemProperty -Path $RegistryPath -Name "LaunchAuthPageOnStartup" -Value 1 -Type DWord -Force
+        Write-Log "Set LaunchAuthPageOnStartup registry value to 1 (DWORD)."
+    } catch {
+        Write-Log "Error setting registry value: $($_.Exception.Message)"
+        throw
+    }
+} catch {
+    # Log the overall registry operation failure
+    Write-Log "Registry operation failed: $($_.Exception.Message)"
+}
+
+# Path to the Cato Client executable
+$CatoExePath = "C:\Program Files (x86)\Cato Networks\Cato Client\CatoClient.exe"
+
+try {
+    # Attempt to start the Cato Agent
+    if (Test-Path $CatoExePath) {
+        Write-Log "Cato Agent executable found. Attempting to start."
+
+        # Start the Cato Agent and log the output for debugging
+        Start-Process -FilePath $CatoExePath -NoNewWindow -PassThru | Tee-Object -FilePath $CatoClientDebugLog
+        Write-Log "Cato Agent start process logged in: $CatoClientDebugLog"
+    } else {
+        Write-Log "Cato Agent executable not found at the specified path."
+    }
+} catch {
+    Write-Log "Error starting Cato Agent: $($_.Exception.Message)"
+}
+
+# End logging
+Write-Log "Script completed."
