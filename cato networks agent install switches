@@ -1,0 +1,38 @@
+CatoClient command line interface (Version 5.11.9.3102)
+
+Usage:
+    CatoClient <command> </command paramters..> <additional parameters>
+
+commands:
+    connect
+    communicate
+    help
+
+connect: Initiate connection
+    Mandatory connect parameters:
+        /ac[count] <account> : Account name.
+        /us[er] <user>       : User name. If there is spaces in user name - use commas
+        /pw <password>       : Password
+        /fi[leconfig] <path> : Use configuration file instead of /ac, /us and /pw
+    Optional connect parameters:
+        /ad[dress] <address> : PoP Server address. May be host name or IP address
+        /ke[epalive] <period>: Set keepalive messages period in seconds.
+                               Echo messages are send only if this parameter is defined.
+        /st[artup] <on/off>  : Set "Connect on startup" on or off.
+        /sm[in] <on/off>     : Set "Start Minimized" on or off.
+
+communicate: Send commands to an ALREADY RUNNING CatoClient application and service
+    Use ONE of the following flags
+        /stop        : terminate all CatoClient instances
+        /connect     : tell already running CatoClient to connect
+        /disconnect  : tell already running CatoClient disconnect
+        /startup_on  : tell already running CatoClient set "Connect on startup"
+        /startup_off : tell already running CatoClient reset "Connect on startup"
+        /state       : get service state"
+
+help : Displays this help message (same as /?)
+
+Examples:
+    CatoClient connect /acc revolvers /user freedom_arms /pw 9%8@7$6ABCD
+    CatoClient connect /acc bodyguard /user "smith wesson" /pw 0%1@2$3ABCD /addr 52.74.187.78 /keepalive 5 /route 172.217.16.196/32 /console
+    CatoClient communicate /stop
