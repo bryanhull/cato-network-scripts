@@ -1,0 +1,73 @@
+###############################################################################
+# Script Name: ConfigureLaunchAuthPage.ps1
+# Version: 9
+# Description: Configures the Windows registry to set the Cato Agent
+# LaunchAuthPageOnStartup registry key for a seamless user
+# authentication experience and attempts to start the Cato Agent.
+# Verifies the process startup and logs the output for troubleshooting.
+# Checks if the Cato Client is already running before launching it.
+# Logs:
+# - General execution logs: C:\Logs\"$env:COMPUTERNAME_RegistryScriptLog.txt"
+###############################################################################
+
+# Define log file location
+$GeneralLogFile = "C:\Logs\$($env:COMPUTERNAME)_RegistryScriptLog.txt"
+
+# Ensure log directory exists
+$LogDirectory = [System.IO.Path]::GetDirectoryName($GeneralLogFile)
+if (-not (Test-Path -Path $LogDirectory)) {
+    New-Item -Path $LogDirectory -ItemType Directory -Force
+}
+
+# Function to log messages
+function Log-Message {
+    param (
+        [string]$Message
+    )
+    $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $LogEntry = "$Timestamp - $Message"
+    Add-Content -Path $GeneralLogFile -Value $LogEntry
+}
+
+# Start logging
+Log-Message "Script execution started."
+
+# Define registry path and value
+$RegistryPath = "HKLM:\SOFTWARE\CatoNetworksVPN"
+$RegistryValueName = "LaunchAuthPageOnStartup"
+$RegistryValueData = 1
+
+# Check if registry key and value already exist
+try {
+    $ExistingValue = Get-ItemProperty -Path $RegistryPath -Name $RegistryValueName -ErrorAction Stop
+    if ($ExistingValue.$RegistryValueName -eq $RegistryValueData) {
+        Log-Message "Registry key and value already exist: $RegistryValueName=$RegistryValueData"
+        Write-Output "Registry key and value already exist: $RegistryValueName=$RegistryValueData"
+    } else {
+        Set-ItemProperty -Path $RegistryPath -Name $RegistryValueName -Value $RegistryValueData -Force
+        Log-Message "Updated registry value: $RegistryValueName to $RegistryValueData in $RegistryPath"
+    }
+} catch {
+    if (-not (Test-Path $RegistryPath)) {
+        try {
+            # Create registry key
+            New-Item -Path $RegistryPath -Force
+            Log-Message "Created registry key: $RegistryPath"
+        } catch {
+            Log-Message "Failed to create registry key: $RegistryPath. Error: $_"
+            exit 1
+        }
+    }
+
+    # Set registry value
+    try {
+        Set-ItemProperty -Path $RegistryPath -Name $RegistryValueName -Value $RegistryValueData -Force
+        Log-Message "Set registry value: $RegistryValueName to $RegistryValueData in $RegistryPath"
+    } catch {
+        Log-Message "Failed to set registry value: $RegistryValueName in $RegistryPath. Error: $_"
+        exit 1
+    }
+}
+
+
+Log-Message "Script execution completed."
