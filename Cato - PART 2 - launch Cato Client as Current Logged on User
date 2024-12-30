@@ -1,0 +1,77 @@
+###############################################################################
+# Script Name: Cato - PART 2 - launch Cato Client as Current Logged on User.ps1
+# Version: 10
+# Description: Configures the Windows registry to set the Cato Agent
+# LaunchAuthPageOnStartup registry key for a seamless user
+# authentication experience and attempts to start the Cato Agent.
+# Verifies the process startup and logs the output for troubleshooting.
+# Checks if the Cato Client is already running before launching it.
+# Logs:
+# - General execution logs: C:\Logs\"$env:COMPUTERNAME_RegistryScriptLog.txt"
+###############################################################################
+
+# Define log file location
+$GeneralLogFile = "C:\Logs\$($env:COMPUTERNAME)_RegistryScriptLog.txt"
+
+# Ensure log directory exists
+$LogDirectory = [System.IO.Path]::GetDirectoryName($GeneralLogFile)
+if (-not (Test-Path -Path $LogDirectory)) {
+    New-Item -Path $LogDirectory -ItemType Directory -Force
+}
+
+# Function to log messages
+function Log-Message {
+    param (
+        [string]$Message
+    )
+    $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $LogEntry = "$Timestamp - $Message"
+    Add-Content -Path $GeneralLogFile -Value $LogEntry
+}
+
+# Start logging
+Log-Message "Script execution started."
+
+# Define the path to the Cato Client executable
+$CatoClientPath = "C:\Program Files (x86)\Cato Networks\Cato Client\CatoClient.exe"
+
+# Check if the Cato Client is already running
+$ProcessName = "CatoClient"  # Update if necessary
+$RunningProcesses = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue
+
+if ($RunningProcesses) {
+    $RunningProcessIDs = $RunningProcesses | ForEach-Object { $_.Id }
+    Log-Message "Cato Client is already running. Process IDs: $($RunningProcessIDs -join ", ")"
+    Write-Output "Cato Client is already running. Process IDs: $($RunningProcessIDs -join ", ")"
+} else {
+    # Launch the application if not running
+    if (Test-Path $CatoClientPath) {
+        try {
+            Start-Process -FilePath $CatoClientPath -WindowStyle Hidden -ArgumentList "/sm on /st on" -ErrorAction Stop
+            Log-Message "Cato Client launch command issued successfully with arguments: '/sm on /st on'."
+        } catch {
+            Log-Message "Failed to launch Cato Client. Error: $_"
+            exit 1
+        }
+    } else {
+        Log-Message "Cato Client executable not found at $CatoClientPath."
+        exit 1
+    }
+
+    # Wait for a few seconds to allow the process to start
+    Start-Sleep -Seconds 5
+
+    # Verify that the process is now running
+    $RunningProcesses = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue
+
+    if ($RunningProcesses) {
+        $RunningProcessIDs = $RunningProcesses | ForEach-Object { $_.Id }
+        Log-Message "Cato Client is now running. Process IDs: $($RunningProcessIDs -join ", ")"
+        Write-Output "Cato Client is now running. Process IDs: $($RunningProcessIDs -join ", ")"
+    } else {
+        Log-Message "Cato Client failed to start. Please check the logs or system settings."
+        exit 1
+    }
+}
+
+Log-Message "Script execution completed."
