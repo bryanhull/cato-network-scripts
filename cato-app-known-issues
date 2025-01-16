@@ -1,1 +1,8 @@
+List of applications that have known issues with Cato Networks agent
 
+
+NinjaRMM
+- TLS Inspection issue
+
+Five9
+- TLS Inspection issue
