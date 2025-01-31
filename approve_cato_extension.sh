@@ -7,27 +7,28 @@ TEAM_ID="CKGSB8CH43"
 # Log file location
 LOG_FILE="/tmp/cato_extension_approval.log"
 
-# Function to log messages
-log_message() {
-    local LOG_LEVEL=$1
-    local MESSAGE=$2
-    echo "$(date '+%Y-%m-%d %H:%M:%S') [$LOG_LEVEL] $MESSAGE" | tee -a "$LOG_FILE"
+# Function to display error messages and exit
+die() {
+  echo "$(date +'%Y-%m-%d %H:%M:%S') - $1" >&2
+  exit 1
 }
 
+# Redirect output to log file with date and time
+exec > >(while read line; do echo "$(date +'%Y-%m-%d %H:%M:%S') - $line"; done | tee -a "$LOG_FILE") 2>&1
+
 # Initialize log file with begin logging message
-echo "$(date +'%Y-%m-%d %H:%M:%S') - Begin Logging" > "$LOG_FILE"
+echo "Begin Logging"
 
 # Check if the script is run with root privileges
 if [[ $EUID -ne 0 ]]; then
-    log_message "ERROR" "This script must be run as root."
-    exit 1
+    die "This script must be run as root."
 fi
 
 # Check if the system extension is already approved
 APPROVED=$(systemextensionsctl list | grep -i "$EXTENSION_ID" | grep -i "activated enabled")
 
 if [[ -z "$APPROVED" ]]; then
-    log_message "INFO" "System extension not approved. Approving now..."
+    echo "System extension not approved. Approving now..."
     
     # Approve the system extension with the correct Team Identifier
     systemextensionsctl approve "$EXTENSION_ID" "$TEAM_ID"
@@ -36,17 +37,13 @@ if [[ -z "$APPROVED" ]]; then
     APPROVED=$(systemextensionsctl list | grep -i "$EXTENSION_ID" | grep -i "activated enabled")
     
     if [[ -n "$APPROVED" ]]; then
-        log_message "INFO" "System extension approved successfully."
+        echo "System extension approved successfully."
     else
-        log_message "ERROR" "Failed to approve the system extension."
-        log_message "DEBUG" "Check if the extension ID and team ID are correct."
-        log_message "DEBUG" "Extension ID: $EXTENSION_ID"
-        log_message "DEBUG" "Team ID: $TEAM_ID"
-        exit 1
+        die "Failed to approve the system extension. Check if the extension ID and team ID are correct. Extension ID: $EXTENSION_ID, Team ID: $TEAM_ID"
     fi
 else
-    log_message "INFO" "System extension is already approved."
+    echo "System extension is already approved."
 fi
 
-log_message "INFO" "Script execution completed."
+echo "Script execution completed."
 exit 0
